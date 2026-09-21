@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bioenergetics & Respiration Mastery Arcade</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 12px 10px 40px; }
+    header { text-align: center; margin-bottom: 12px; width: 100%; max-width: 600px; }
+    h1 { font-size: 1.3rem; color: #38bdf8; font-weight: 800; }
+    .subhead { font-size: 0.8rem; color: #94a3b8; }
+    .nav { display: flex; width: 100%; max-width: 600px; gap: 6px; margin-bottom: 12px; }
+    .nav-btn { flex: 1; padding: 10px 4px; font-size: 0.75rem; font-weight: 700; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; cursor: pointer; }
+    .nav-btn.active { background: #0284c7; color: #ffffff; border-color: #38bdf8; }
+    .stats { width: 100%; max-width: 600px; display: flex; justify-content: space-between; background: #1e293b; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; border: 1px solid #334155; font-size: 0.85rem; font-weight: 700; }
+    .pane { width: 100%; max-width: 600px; display: none; flex-direction: column; align-items: center; }
+    .pane.active { display: flex; }
+    .card { width: 100%; background: #1e293b; border: 2px solid #38bdf8; border-radius: 12px; padding: 20px 16px; text-align: center; margin-bottom: 16px; min-height: 110px; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 600; line-height: 1.4; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .btn-action { background: #334155; color: #ffffff; border: 2px solid #475569; border-radius: 10px; padding: 14px 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: 0.1s; }
+    .btn-action:active { transform: scale(0.97); }
+    .feedback { min-height: 24px; margin-top: 10px; font-size: 0.85rem; font-weight: 700; text-align: center; }
+    .match-board { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+    .col { display: flex; flex-direction: column; gap: 8px; }
+    .m-card { background: #1e293b; border: 2px solid #334155; border-radius: 8px; padding: 12px 8px; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; cursor: pointer; text-align: center; min-height: 60px; display: flex; align-items: center; justify-content: center; }
+    .m-card.selected { border-color: #38bdf8; background: #075985; color: #fff; }
+    .m-card.correct { border-color: #22c55e; background: #14532d; color: #86efac; pointer-events: none; }
+    .m-card.wrong { border-color: #ef4444; background: #7f1d1d; color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚡ Bioenergetics Study Terminal</h1>
+    <div class="subhead">OpenStax Biology 2e • Chapters 6, 7 & 8</div>
+  </header>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab(0)">⚡ Sorter</button>
+    <button class="nav-btn" onclick="switchTab(1)">📍 Pathway Map</button>
+    <button class="nav-btn" onclick="switchTab(2)">🧩 Matcher</button>
+  </div>
+
+  <div class="stats">
+    <span>Score: <span id="scoreVal" style="color:#38bdf8;">0</span></span>
+    <span>Streak: <span id="streakVal" style="color:#22c55e;">0</span> 🔥</span>
+  </div>
+
+  <!-- PANE 1: SPEED SORTER -->
+  <div class="pane active" id="pane0">
+    <div class="card" id="sorterCard">Loading item...</div>
+    <div class="btn-grid" id="sorterButtons"></div>
+    <div class="feedback" id="sorterFeedback"></div>
+  </div>
+
+  <!-- PANE 2: PATHWAY TERMINAL -->
+  <div class="pane" id="pane1">
+    <div class="card" id="pathwayCard">Loading pathway question...</div>
+    <div class="btn-grid" style="grid-template-columns: 1fr;" id="pathwayButtons"></div>
+    <div class="feedback" id="pathwayFeedback"></div>
+  </div>
+
+  <!-- PANE 3: MATCHER -->
+  <div class="pane" id="pane2">
+    <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:8px; text-align:center;">Pair the term with its biological function:</div>
+    <div class="match-board">
+      <div class="col" id="colTerms"></div>
+      <div class="col" id="colDefs"></div>
+    </div>
+    <div class="feedback" id="matcherFeedback"></div>
+  </div>
+
+  <script>
+    let score = 0;
+    let streak = 0;
+
+    function updateStats(correct) {
+      if (correct) {
+        score += 10;
+        streak += 1;
+      } else {
+        streak = 0;
+      }
+      document.getElementById('scoreVal').textContent = score;
+      document.getElementById('streakVal').textContent = streak;
+    }
+
+    function switchTab(index) {
+      document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === index));
+      document.querySelectorAll('.pane').forEach((p, i) => p.classList.toggle('active', i === index));
+      if (index === 0) loadSorter();
+      if (index === 1) loadPathway();
+      if (index === 2) loadMatcher();
+    }
+
+    /* GAME 1: SORTER */
+    const SORTER_ITEMS = [
+      { text: "Cellular Respiration (Breaking down glucose to release energy)", cat: "Catabolic / Exergonic" },
+      { text: "Photosynthesis (Building glucose from CO2 & H2O using sunlight)", cat: "Anabolic / Endergonic" },
+      { text: "Hydrolysis of ATP into ADP + Pi", cat: "Catabolic / Exergonic" },
+      { text: "Dehydration synthesis of a polypeptide chain", cat: "Anabolic / Endergonic" },
+      { text: "Reaction with negative free energy (ΔG < 0)", cat: "Catabolic / Exergonic" },
+      { text: "Reaction with positive free energy (ΔG > 0)", cat: "Anabolic / Endergonic" }
+    ];
+    let sorterIdx = 0;
+
+    function loadSorter() {
+      const item = SORTER_ITEMS[sorterIdx % SORTER_ITEMS.length];
+      document.getElementById('sorterCard').textContent = item.text;
+      document.getElementById('sorterFeedback').textContent = "";
+      const container = document.getElementById('sorterButtons');
+      container.innerHTML = `
+        <button class="btn-action" onclick="answerSorter('Catabolic / Exergonic')">Catabolic / Exergonic (ΔG < 0)</button>
+        <button class="btn-action" onclick="answerSorter('Anabolic / Endergonic')">Anabolic / Endergonic (ΔG > 0)</button>
+      `;
+    }
+
+    function answerSorter(choice) {
+      const item = SORTER_ITEMS[sorterIdx % SORTER_ITEMS.length];
+      if (choice === item.cat) {
+        document.getElementById('sorterFeedback').innerHTML = `<span style="color:#22c55e;">✓ Correct!</span>`;
+        updateStats(true);
+        sorterIdx++;
+        setTimeout(loadSorter, 900);
+      } else {
+        document.getElementById('sorterFeedback').innerHTML = `<span style="color:#ef4444;">✗ Incorrect! Try again.</span>`;
+        updateStats(false);
+      }
+    }
+
+    /* GAME 2: PATHWAY TERMINAL */
+    const PATHWAY_ITEMS = [
+      { q: "Where does Glycolysis occur in eukaryotic cells?", ans: "Cytoplasm", opts: ["Cytoplasm", "Mitochondrial Matrix", "Inner Membrane", "Thylakoid Lumen"] },
+      { q: "Where does the Citric Acid (Krebs) Cycle take place?", ans: "Mitochondrial Matrix", opts: ["Mitochondrial Matrix", "Cytosol", "Intermembrane Space", "Stroma"] },
+      { q: "What is the terminal electron acceptor in aerobic cellular respiration?", ans: "Oxygen (O2)", opts: ["Oxygen (O2)", "NAD+", "Pyruvate", "Carbon Dioxide"] },
+      { q: "Where do the Light-Dependent reactions of photosynthesis occur?", ans: "Thylakoid Membrane", opts: ["Thylakoid Membrane", "Chloroplast Stroma", "Outer Membrane", "Cytoplasm"] },
+      { q: "Where does the Calvin Cycle fix carbon dioxide?", ans: "Chloroplast Stroma", opts: ["Chloroplast Stroma", "Thylakoid Lumen", "Mitochondrial Matrix", "Cytosol"] },
+      { q: "Which photosystem splits water to replace lost electrons?", ans: "Photosystem II", opts: ["Photosystem II", "Photosystem I", "ATP Synthase", "RuBisCO"] }
+    ];
+    let pathIdx = 0;
+
+    function loadPathway() {
+      const qObj = PATHWAY_ITEMS[pathIdx % PATHWAY_ITEMS.length];
+      document.getElementById('pathwayCard').textContent = qObj.q;
+      document.getElementById('pathwayFeedback').textContent = "";
+      const container = document.getElementById('pathwayButtons');
+      container.innerHTML = "";
+      const shuffledOpts = [...qObj.opts].sort(() => Math.random() - 0.5);
+      shuffledOpts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "btn-action";
+        btn.style.marginBottom = "6px";
+        btn.textContent = opt;
+        btn.onclick = () => answerPathway(opt, qObj.ans);
+        container.appendChild(btn);
+      });
+    }
+
+    function answerPathway(choice, correct) {
+      if (choice === correct) {
+        document.getElementById('pathwayFeedback').innerHTML = `<span style="color:#22c55e;">✓ Correct!</span>`;
+        updateStats(true);
+        pathIdx++;
+        setTimeout(loadPathway, 900);
+      } else {
+        document.getElementById('pathwayFeedback').innerHTML = `<span style="color:#ef4444;">✗ Incorrect! Try again.</span>`;
+        updateStats(false);
+      }
+    }
+
+    /* GAME 3: MATCHER */
+    const MATCH_DATA = [
+      { id: "rubisco", term: "RuBisCO", def: "Enzyme fixing CO2 onto RuBP in the Calvin Cycle" },
+      { id: "atp_synthase", term: "ATP Synthase", def: "Enzyme powered by H+ gradient to synthesize ATP" },
+      { id: "fermentation", term: "Fermentation", def: "Pathway regenerating NAD+ in absence of oxygen" },
+      { id: "allosteric", term: "Allosteric Site", def: "Regulatory site away from the active site" }
+    ];
+    let selectedTerm = null;
+    let selectedDef = null;
+
+    function loadMatcher() {
+      selectedTerm = null;
+      selectedDef = null;
+      document.getElementById('matcherFeedback').textContent = "";
+      const termsCol = document.getElementById('colTerms');
+      const defsCol = document.getElementById('colDefs');
+      termsCol.innerHTML = "";
+      defsCol.innerHTML = "";
+
+      const shuffledTerms = [...MATCH_DATA].sort(() => Math.random() - 0.5);
+      const shuffledDefs = [...MATCH_DATA].sort(() => Math.random() - 0.5);
+
+      shuffledTerms.forEach(item => {
+        const el = document.createElement('div');
+        el.className = "m-card";
+        el.textContent = item.term;
+        el.dataset.id = item.id;
+        el.onclick = () => {
+          if (el.classList.contains('correct')) return;
+          if (selectedTerm) selectedTerm.classList.remove('selected');
+          selectedTerm = el;
+          el.classList.add('selected');
+          checkPair();
+        };
+        termsCol.appendChild(el);
+      });
+
+      shuffledDefs.forEach(item => {
+        const el = document.createElement('div');
+        el.className = "m-card";
+        el.textContent = item.def;
+        el.dataset.id = item.id;
+        el.onclick = () => {
+          if (el.classList.contains('correct')) return;
+          if (selectedDef) selectedDef.classList.remove('selected');
+          selectedDef = el;
+          el.classList.add('selected');
+          checkPair();
+        };
+        defsCol.appendChild(el);
+      });
+    }
+
+    function checkPair() {
+      if (!selectedTerm || !selectedDef) return;
+      if (selectedTerm.dataset.id === selectedDef.dataset.id) {
+        selectedTerm.className = "m-card correct";
+        selectedDef.className = "m-card correct";
+        selectedTerm = null;
+        selectedDef = null;
+        updateStats(true);
+        document.getElementById('matcherFeedback').innerHTML = `<span style="color:#22c55e;">✓ Match confirmed!</span>`;
+      } else {
+        const t = selectedTerm;
+        const d = selectedDef;
+        t.className = "m-card wrong";
+        d.className = "m-card wrong";
+        selectedTerm = null;
+        selectedDef = null;
+        updateStats(false);
+        setTimeout(() => {
+          if (!t.classList.contains('correct')) t.className = "m-card";
+          if (!d.classList.contains('correct')) d.className = "m-card";
+        }, 400);
+      }
+    }
+
+    window.onload = () => switchTab(0);
+  </script>
+</body>
+</html>
